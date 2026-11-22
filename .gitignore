@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+
+node_modules/
+dist/
+build/
+
+data/source/
+data/generated/
+data/cards_enriched.csv
+
+*.mp3
+*.opus
+*.wav
+*.ogg
+
