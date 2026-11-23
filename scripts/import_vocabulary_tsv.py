@@ -10,7 +10,6 @@ from pathlib import Path
 import krdict
 
 SEED_TSV = Path("data/source/results.tsv")
-TOPIK_TSV = Path("data/source/topik_official.tsv")
 OUTPUT = Path("data/generated/source_import.jsonl")
 
 SEED_URL = (
@@ -61,39 +60,6 @@ def read_seed_words():
     return words
 
 
-def read_official_topik():
-    """Load TOPIK rows from a separately prepared original-source TSV."""
-    if not TOPIK_TSV.exists():
-        raise SystemExit(
-            f"Missing {TOPIK_TSV}. Create it from the original TOPIK source "
-            "with columns: word, topik_level, source_url, source_version"
-        )
-
-    topik_by_word = {}
-
-    with TOPIK_TSV.open("r", encoding="utf-8-sig", newline="") as f:
-        reader = csv.DictReader(f, delimiter="\t")
-        required = {"word", "topik_level", "source_url", "source_version"}
-        missing = required - set(reader.fieldnames or [])
-        if missing:
-            raise SystemExit(
-                f"{TOPIK_TSV} is missing columns: {', '.join(sorted(missing))}"
-            )
-
-        for row in reader:
-            word = clean(row.get("word"))
-            if not word:
-                continue
-
-            topik_by_word.setdefault(word, []).append({
-                "topik_level": clean(row.get("topik_level")),
-                "source_url": clean(row.get("source_url")),
-                "source_version": clean(row.get("source_version")),
-            })
-
-    return topik_by_word
-
-
 def get_results(api_response):
     """Extract result entries from the client's dictionary response."""
     payload = api_response.asdict()
@@ -116,12 +82,10 @@ def main():
     krdict.set_key(api_key)
 
     seed_words = read_seed_words()
-    topik_by_word = read_official_topik()
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
 
     imported = 0
     nikl_matches = 0
-    topik_matches = 0
 
     with OUTPUT.open("w", encoding="utf-8") as output:
         for index, word in enumerate(seed_words, start=1):
@@ -136,10 +100,6 @@ def main():
                     "status": "not_found",
                     "source": "National Institute of the Korean Language",
                     "source_url": NIKL_URL,
-                    "entries": [],
-                },
-                "topik": {
-                    "status": "not_found",
                     "entries": [],
                 },
             }
