@@ -1,9 +1,24 @@
+if (typeof document !== "undefined" && !document.getElementById("ubuntu-font-link")) {
+  const link = document.createElement("link");
+  link.id = "ubuntu-font-link";
+  link.rel = "stylesheet";
+  link.href =
+    "https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Ubuntu+Mono:wght@400;700&family=Ubuntu:ital,wght@0,400;0,500;0,700;1,400&display=swap";
+  document.head.appendChild(link);
+}
+
+const FONT_STACK =
+  "'Ubuntu', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, serif";
+
+const KOREAN_SERIF_STACK =
+  "'Noto Serif KR', 'Ubuntu', serif";
+
 export const styles = {
   page: {
     maxWidth: 720,
     margin: "28px auto",
     padding: "0 16px",
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    fontFamily: FONT_STACK,
     color: "#0f172a",
   },
   header: {
@@ -35,6 +50,7 @@ export const styles = {
     borderRadius: 6,
     border: "1px solid #cbd5e1",
     background: "#f8fafc",
+    fontFamily: "inherit",
     fontSize: 12,
     fontWeight: 600,
     cursor: "pointer",
@@ -45,6 +61,7 @@ export const styles = {
     border: "1px solid #0f172a",
     background: "#0f172a",
     color: "#ffffff",
+    fontFamily: "inherit",
     fontSize: 12,
     fontWeight: 600,
     cursor: "pointer",
@@ -55,6 +72,7 @@ export const styles = {
     padding: "7px 10px",
     borderRadius: 6,
     border: "1px solid #cbd5e1",
+    fontFamily: "inherit",
     fontSize: 13,
   },
   primarySmallBtn: {
@@ -63,6 +81,7 @@ export const styles = {
     border: "none",
     background: "#0f172a",
     color: "#ffffff",
+    fontFamily: "inherit",
     fontSize: 13,
     fontWeight: 600,
     cursor: "pointer",
@@ -72,6 +91,7 @@ export const styles = {
     borderRadius: 6,
     border: "1px solid #cbd5e1",
     background: "#f8fafc",
+    fontFamily: "inherit",
     fontSize: 12,
     fontWeight: 600,
     cursor: "pointer",
@@ -84,12 +104,14 @@ export const styles = {
     padding: "8px 12px",
     borderRadius: 8,
     border: "1px solid #cbd5e1",
+    fontFamily: "inherit",
     fontSize: 14,
   },
   select: {
     padding: "8px 12px",
     borderRadius: 8,
     border: "1px solid #cbd5e1",
+    fontFamily: "inherit",
     fontSize: 14,
     background: "#ffffff",
   },
@@ -135,10 +157,21 @@ export const styles = {
     fontSize: 12,
     fontWeight: 600,
   },
-  word: { fontSize: 44, fontWeight: 700, letterSpacing: "-0.02em", margin: "6px 0 8px" },
+  word: {
+    fontSize: 44,
+    fontWeight: 700,
+    letterSpacing: "-0.01em",
+    margin: "6px 0 8px",
+    fontFamily: KOREAN_SERIF_STACK,
+  },
   pronRow: { display: "flex", gap: 10, alignItems: "baseline", flexWrap: "wrap", marginBottom: 14 },
-  pronHangul: { fontSize: 18, fontWeight: 600, color: "#334155" },
-  pronIpa: { fontSize: 15, color: "#64748b", fontFamily: "monospace" },
+  pronHangul: {
+    fontSize: 18,
+    fontWeight: 600,
+    color: "#334155",
+    fontFamily: KOREAN_SERIF_STACK,
+  },
+  pronIpa: { fontSize: 15, color: "#64748b", fontFamily: "'Ubuntu Mono', monospace" },
   meaningSection: { borderTop: "1px solid #e2e8f0", paddingTop: 14, marginBottom: 16 },
   senseList: {
     listStyle: "none",
@@ -159,7 +192,19 @@ export const styles = {
     fontSize: 12,
     fontWeight: 700,
   },
-  guidePhrase: { fontSize: 14, color: "#475569", marginTop: 2, paddingLeft: 4 },
+  guidePhrase: {
+    fontSize: 14,
+    color: "#475569",
+    marginTop: 2,
+    paddingLeft: 4,
+    fontFamily: KOREAN_SERIF_STACK,
+  },
+  senseLinksRow: {
+    fontSize: 12,
+    color: "#64748b",
+    marginTop: 4,
+    paddingLeft: 4,
+  },
   fallbackMeaning: { fontSize: 18, margin: 0 },
   prompt: { color: "#64748b", fontSize: 14, margin: "14px 0" },
   audioBar: { display: "flex", alignItems: "center", gap: 12, marginTop: 12 },
@@ -169,6 +214,7 @@ export const styles = {
     border: "none",
     background: "#0f172a",
     color: "#ffffff",
+    fontFamily: "inherit",
     fontSize: 13,
     fontWeight: 600,
     cursor: "pointer",
@@ -182,6 +228,7 @@ export const styles = {
     border: "1px solid #fecaca",
     background: "#fef2f2",
     color: "#b91c1c",
+    fontFamily: "inherit",
     fontSize: 13,
     fontWeight: 600,
     cursor: "pointer",
@@ -193,6 +240,7 @@ export const styles = {
     border: "1px solid #fde68a",
     background: "#fffbeb",
     color: "#b45309",
+    fontFamily: "inherit",
     fontSize: 13,
     fontWeight: 600,
     cursor: "pointer",
@@ -204,6 +252,7 @@ export const styles = {
     border: "1px solid #bae6fd",
     background: "#f0f9ff",
     color: "#0369a1",
+    fontFamily: "inherit",
     fontSize: 13,
     fontWeight: 600,
     cursor: "pointer",
@@ -215,6 +264,7 @@ export const styles = {
     border: "1px solid #bbf7d0",
     background: "#f0fdf4",
     color: "#15803d",
+    fontFamily: "inherit",
     fontSize: 13,
     fontWeight: 600,
     cursor: "pointer",
@@ -226,6 +276,18 @@ export const styles = {
     borderRadius: 8,
     border: "1px solid #cbd5e1",
     background: "#ffffff",
+    fontFamily: "inherit",
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  navButton: {
+    flex: 1,
+    padding: "10px 12px",
+    borderRadius: 8,
+    border: "1px solid #cbd5e1",
+    background: "#ffffff",
+    fontFamily: "inherit",
     fontSize: 13,
     fontWeight: 600,
     cursor: "pointer",

@@ -1,7 +1,38 @@
 import React from "react";
 import { styles } from "../styles/appStyles";
 
+function getDictionaryLinks(word) {
+  const cleanWord = (word || "").replace(/^-+|-+$/g, "").trim();
+  if (!cleanWord) return [];
+
+  const encoded = encodeURIComponent(cleanWord);
+  return [
+    {
+      id: "naver",
+      label: "Naver",
+      url: `https://en.dict.naver.com/#/search?query=${encoded}`,
+    },
+    {
+      id: "krdict",
+      label: "NIKL Learners'",
+      url: `https://krdict.korean.go.kr/eng/dicSearch/search?nation=eng&nationCode=6&ParaWordNo=&mainSearchWord=${encoded}`,
+    },
+    {
+      id: "daum",
+      label: "Daum",
+      url: `https://dic.daum.net/search.do?q=${encoded}&dic=eng`,
+    },
+    {
+      id: "wiktionary",
+      label: "Wiktionary",
+      url: `https://en.wiktionary.org/wiki/${encoded}`,
+    },
+  ];
+}
+
 export function FlashcardView({ card, currentProgress, flipped, activeAudio, onPlayAudio }) {
+  const dictLinks = getDictionaryLinks(card.word);
+
   return (
     <article style={{ ...styles.card, backgroundColor: flipped ? "#f8fafc" : "#ffffff" }}>
       <div>
@@ -48,7 +79,7 @@ export function FlashcardView({ card, currentProgress, flipped, activeAudio, onP
                           rel="noreferrer"
                           style={styles.link}
                         >
-                          Wiktionary entry ↗
+                          Wiktionary ({m.guide_phrase || card.word}) ↗
                         </a>
                       </div>
                     )}
@@ -57,6 +88,25 @@ export function FlashcardView({ card, currentProgress, flipped, activeAudio, onP
               </ol>
             ) : (
               <p style={styles.fallbackMeaning}>{card.meaning || "No meaning available"}</p>
+            )}
+
+            {dictLinks.length > 0 && (
+              <div style={styles.dictLinksRow}>
+                <span>Look up: </span>
+                {dictLinks.map((dict, idx) => (
+                  <React.Fragment key={dict.id}>
+                    {idx > 0 && " · "}
+                    <a
+                      href={dict.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={styles.link}
+                    >
+                      {dict.label} ↗
+                    </a>
+                  </React.Fragment>
+                ))}
+              </div>
             )}
           </div>
         ) : (
