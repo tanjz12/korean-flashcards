@@ -3,6 +3,7 @@ import json
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import quote
 
 POS_MAP = {
     "명사": "noun",
@@ -60,6 +61,15 @@ def extract_derived_words(items: Any) -> List[str]:
         if stripped and stripped != raw:
             words.append(stripped)
     return words
+
+
+def build_wiktionary_url(term: str, fallback_word: str) -> Optional[str]:
+    clean_term = (term or "").strip()
+    clean_fallback = (fallback_word or "").strip()
+    target = clean_term or clean_fallback
+    if not target:
+        return None
+    return f"https://en.wiktionary.org/wiki/{quote(target, safe='')}"
 
 
 def load_kaikki_index(kaikki_path: Optional[Path]) -> Dict[str, List[Dict[str, Any]]]:
@@ -171,20 +181,28 @@ def extract_kaikki_sounds(entries: List[Dict[str, Any]]) -> Tuple[str, str]:
 
 def lookup_entry_for_sense(
     meaning_obj: Dict[str, Any],
+    word: str,
+    ko_pos: str,
     headword_candidates: List[Dict[str, Any]],
     kaikki_index: Dict[str, List[Dict[str, Any]]],
     fallback_cursor: Dict[str, int],
 ) -> Optional[Dict[str, Any]]:
-    # Target the word/phrase for this specific sense first (e.g. "전문가", "주택가", "최고가")
-    target_term = (meaning_obj.get("guide_phrase") or meaning_obj.get("meaning") or "").strip()
+    is_affix = POS_MAP.get(ko_pos.strip(), "") == "affix" or word.startswith("-") or word.endswith("-")
 
+    if is_affix and headword_candidates:
+        idx = fallback_cursor.get("i", 0)
+        best_cand = headword_candidates[idx] if idx < len(headword_candidates) else headword_candidates[0]
+        if idx < len(headword_candidates):
+            fallback_cursor["i"] = idx + 1
+        return candidate_to_wiktionary(best_cand)
+
+    target_term = (meaning_obj.get("guide_phrase") or meaning_obj.get("meaning") or "").strip()
     if target_term:
         term_entries = find_kaikki_entries(kaikki_index, target_term)
-        term_candidates = extract_kaikki_candidates(term_entries)
+        term_candidates = extract_kaikki_candidates(term_entries, ko_pos)
         if term_candidates:
             return candidate_to_wiktionary(term_candidates[0])
 
-    # Fallback to the flashcard headword's own Wiktionary senses if the sense term isn't found
     if headword_candidates:
         idx = fallback_cursor.get("i", 0)
         best_cand = headword_candidates[idx] if idx < len(headword_candidates) else headword_candidates[0]
@@ -221,9 +239,12 @@ def process_meanings(
         guide_txt = (m.get("guide_phrase") or "").strip()
         hanja = (m.get("hanja") or "").strip()
         pos = (m.get("pos") or card_pos).strip()
-        source = (m.get("source_id") or m.get("source") or "").strip()
 
         dedupe_sig = normalize_phrase(word, guide_txt or meaning_txt)
+        wikt = lookup_entry_for_sense(m, word, pos, headword_candidates, kaikki_index, fallback_cursor)
+        wikt_target = guide_txt or meaning_txt or (wikt or {}).get("word") or word
+        wiktionary_url = build_wiktionary_url(wikt_target, word)
+
         if dedupe and dedupe_sig and dedupe_sig in seen_keys:
             existing = results[seen_keys[dedupe_sig]]
             if not existing["meaning"] and meaning_txt:
@@ -234,19 +255,20 @@ def process_meanings(
                 existing["sense"] = sense
             if not existing["hanja"] and hanja:
                 existing["hanja"] = hanja
-            if source and source not in existing["sources"]:
-                existing["sources"].append(source)
+            if existing["wiktionary"] is None and wikt is not None:
+                existing["wiktionary"] = wikt
+            if not existing.get("wiktionary_url") and wiktionary_url:
+                existing["wiktionary_url"] = wiktionary_url
             continue
 
-        wikt = lookup_entry_for_sense(m, headword_candidates, kaikki_index, fallback_cursor)
         entry = {
             "sense": sense,
             "meaning": meaning_txt,
             "guide_phrase": guide_txt,
             "hanja": hanja,
             "pos": pos,
-            "sources": [source] if source else [],
             "wiktionary": wikt,
+            "wiktionary_url": wiktionary_url,
         }
         if dedupe_sig:
             seen_keys[dedupe_sig] = len(results)
@@ -254,14 +276,15 @@ def process_meanings(
 
     if not results and headword_candidates:
         for cand in headword_candidates:
+            cand_word = (cand.get("word") or word).strip()
             results.append({
                 "sense": "",
                 "meaning": "",
                 "guide_phrase": "",
                 "hanja": "",
                 "pos": card_pos,
-                "sources": ["kaikki_wiktionary"],
                 "wiktionary": candidate_to_wiktionary(cand),
+                "wiktionary_url": build_wiktionary_url(cand_word, word),
             })
 
     return results
@@ -307,6 +330,28 @@ def parse_audio_block(audio_info: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     }
 
 
+def collect_card_sources(raw_sources: Any, source_registry: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
+    card_sources: List[Dict[str, Any]] = []
+    seen_ids = set()
+
+    for src in raw_sources or []:
+        if isinstance(src, dict):
+            src_id = (src.get("id") or "").strip()
+            if src_id and src_id not in seen_ids:
+                seen_ids.add(src_id)
+                card_sources.append(src)
+                source_registry.setdefault(src_id, src)
+        elif isinstance(src, str) and src.strip():
+            sid = src.strip()
+            if sid not in seen_ids:
+                seen_ids.add(sid)
+                obj = source_registry.get(sid) or {"id": sid, "name": sid}
+                card_sources.append(obj)
+                source_registry.setdefault(sid, obj)
+
+    return card_sources
+
+
 def build_flashcards(
     merged_vocab_path: Path,
     audio_manifest_path: Optional[Path],
@@ -324,13 +369,9 @@ def build_flashcards(
         if not word:
             continue
 
-        for src in item.get("sources") or []:
-            src_id = src.get("id")
-            if src_id and src_id not in source_registry:
-                source_registry[src_id] = src
-
         headword_entries = find_kaikki_entries(kaikki_index, word)
         fallback_ipa, fallback_hangul = extract_kaikki_sounds(headword_entries)
+        card_sources = collect_card_sources(item.get("sources"), source_registry)
 
         pos = (item.get("pos") or "").strip()
         cards_by_word[word] = {
@@ -340,6 +381,7 @@ def build_flashcards(
             "hanja": (item.get("hanja") or "").strip(),
             "ipa": (item.get("ipa") or fallback_ipa).strip(),
             "pronunciation_hangul": (item.get("pronunciation_hangul") or fallback_hangul).strip(),
+            "sources": card_sources,
             "audio": {
                 "default": None,
                 "type": None,
@@ -357,6 +399,12 @@ def build_flashcards(
 
     if audio_manifest_path and audio_manifest_path.exists():
         manifest = json.loads(audio_manifest_path.read_text(encoding="utf-8"))
+        tts_source = {
+            "id": "tts_generated",
+            "name": "Microsoft Neural TTS",
+            "url": "https://github.com/rany2/edge-tts",
+            "license_note": "Synthesized Korean pronunciation audio",
+        }
 
         for raw_key, audio_info in manifest.items():
             word = base_word_from_key(raw_key)
@@ -366,22 +414,25 @@ def build_flashcards(
             audio_obj = parse_audio_block(audio_info)
             if audio_obj:
                 cards_by_word[word]["audio"] = audio_obj
-                source_registry.setdefault("tts_generated", {
+                custom_tts = {
                     "id": "tts_generated",
-                    "name": audio_info.get("provider_name", "Microsoft Neural TTS"),
-                    "url": audio_info.get("source_url", "https://github.com/rany2/edge-tts"),
-                    "license_note": "Synthesized Korean pronunciation audio",
-                })
+                    "name": audio_info.get("provider_name", tts_source["name"]),
+                    "url": audio_info.get("source_url", tts_source["url"]),
+                    "license_note": tts_source["license_note"],
+                }
+                source_registry.setdefault("tts_generated", custom_tts)
+                if not any(s.get("id") == "tts_generated" for s in cards_by_word[word]["sources"]):
+                    cards_by_word[word]["sources"].append(source_registry["tts_generated"])
 
     return list(cards_by_word.values()), source_registry
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Build simplified flashcards.json with relative audio & Wiktionary senses")
+    parser = argparse.ArgumentParser(description="Build flashcards.json with card sources and per-meaning Wiktionary links")
     parser.add_argument("--merged-vocab", type=Path, default=Path("data/merged_vocab.json"))
     parser.add_argument("--audio-manifest", type=Path, default=Path("data/audio_manifest.json"))
     parser.add_argument("--kaikki", type=Path, default=Path("data/source/kaikki_Korean.jsonl"))
-    parser.add_argument("--no-dedupe-meanings", action="store_true", help="Keep duplicate NIKL/Julienshim meaning entries separate")
+    parser.add_argument("--no-dedupe-meanings", action="store_true", help="Keep duplicate meaning entries separate")
     parser.add_argument("--wrap-meta", action="store_true", help="Output { sources, cards } object instead of a flat array")
     parser.add_argument("--words", nargs="+", default=None, help="Build only for specific words, e.g. --words -가 가게 가격")
     parser.add_argument("--limit", type=int, default=None, help="Limit output to the first N flashcards")
