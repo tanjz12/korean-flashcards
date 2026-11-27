@@ -1,14 +1,16 @@
 .env
 .env.*
 !.env.example
-
+data/
+audio_out/
 node_modules/
 dist/
+__pycache__/
+*.pyc
+
+
 build/
 
-data/source/
-data/generated/
-data/cards_enriched.csv
 
 *.mp3
 *.opus
