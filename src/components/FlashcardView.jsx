@@ -35,9 +35,22 @@ export function FlashcardView({ card, currentProgress, flipped, activeAudio, onP
                 {card.meanings.map((m, idx) => (
                   <li key={`${m.sense || idx}-${idx}`} style={styles.senseItem}>
                     {m.sense && <span style={styles.senseTag}>{m.sense}</span>}
+                    {m.hanja && <span style={styles.badgeMuted}>{m.hanja}</span>}
                     <span>{m.meaning || "—"}</span>
                     {m.guide_phrase && (
                       <div style={styles.guidePhrase}>예: {m.guide_phrase}</div>
+                    )}
+                    {m.wiktionary_url && (
+                      <div>
+                        <a
+                          href={m.wiktionary_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={styles.link}
+                        >
+                          Wiktionary entry ↗
+                        </a>
+                      </div>
                     )}
                   </li>
                 ))}

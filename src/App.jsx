@@ -8,6 +8,7 @@ import { FilterBar } from "./components/FilterBar";
 import { FlashcardView } from "./components/FlashcardView";
 import { Sm2RatingBar } from "./components/Sm2RatingBar";
 import { SourceAttribution } from "./components/SourceAttribution";
+import { DATASET_SOURCES } from "./constants/sources";
 import { styles } from "./styles/appStyles";
 
 const PAGE_SIZE = 1000;
@@ -28,7 +29,7 @@ async function fetchAllFlashcards(levelFilter) {
   while (true) {
     let query = supabase
       .from("flashcards")
-      .select("id, word, hanja, ipa, pronunciation_hangul, pos, level, audio, meanings, sources")
+      .select("id, word, hanja, ipa, pronunciation_hangul, pos, level, audio, meanings")
       .order("word", { ascending: true })
       .range(from, from + PAGE_SIZE - 1);
 
@@ -353,10 +354,10 @@ export default function App() {
               Next {BATCH_SIZE}
             </button>
           </div>
-
-          <SourceAttribution sources={card.sources} />
         </>
       )}
+
+      <SourceAttribution sources={DATASET_SOURCES} />
     </main>
   );
 }

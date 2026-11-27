@@ -6,7 +6,7 @@ export function SourceAttribution({ sources }) {
 
   return (
     <footer style={styles.attributionBox}>
-      <div style={styles.attributionTitle}>Sources & Attribution</div>
+      <div style={styles.attributionTitle}>Sources &amp; Attribution</div>
       <ul style={styles.attributionList}>
         {sources.map((src) => (
           <li key={src.id} style={styles.attributionItem}>
